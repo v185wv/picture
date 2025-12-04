@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>中山篆明信片生成</title>
+    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+QingKe+HuangYou&family=ZCOOL+XiaoWei&family=Noto+Serif+SC:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "SimSun", "宋体", serif;
+        }
+        
+        body {
+            background-color: #f5f2e9;
+            color: #333;
+            padding: 20px;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" opacity="0.05"><path d="M20,20 L80,20 L80,80 L20,80 Z" fill="none" stroke="%23333" stroke-width="2"/></svg>');
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        header {
+            text-align: center;
+            padding: 20px 0;
+            border-bottom: 2px solid #8c2e0b;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            color: #8c2e0b;
+            margin-bottom: 10px;
+            letter-spacing: 5px;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            color: #666;
+        }
+        
+        .main-content {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .controls-panel {
+            flex: 1;
+            min-width: 300px;
+            background: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .preview-area {
+            flex: 2;
+            min-width: 500px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .postcard-preview {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            min-height: 500px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 查询结果展示区域 - 固定在明信片中上部 */
+        .seal-display-area {
+            width: 100%;
+            min-height: 250px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 10px;
+            margin-top: 10px;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .postcard-canvas {
+            width: 100%;
+            max-width: 354px; /* 标准明信片宽度 */
+            height: 531px; /* 标准明信片高度 */
+            background: #f9f5eb;
+            border: 1px solid #ddd;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start; /* 从上方开始排列内容，使结果区域固定在明信片中上部 */
+            padding: 20px;
+        }
+        
+        .postcard-size-info {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #666;
+            text-align: center;
+        }
+        
+        .control-group {
+            margin-bottom: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .control-header {
+            background: #f5f2e9;
+            padding: 12px 15px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .control-header h3 {
+            margin: 0;
+            color: #8c2e0b;
+            font-size: 1.1rem;
+        }
+        
+        .control-content {
+            padding: 15px;
+        }
+        
+        select, input, textarea, button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        
+        button {
+            background: #8c2e0b;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-weight: bold;
+        }
+        
+        button:hover {
+            background: #6d2409;
+        }
+        
+        .info-box {
+            background: #f9f5eb;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 4px solid #8c2e0b;
+        }
+        
+        .info-box h4 {
+            margin-bottom: 10px;
+            color: #8c2e0b;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 30px;
+            padding: 20px;
+            color: #666;
+            border-top: 1px solid #ddd;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .preview-area, .controls-panel {
+                min-width: 100%;
+            }
+            
+            .postcard-canvas {
+                max-width: 100%;
+                height: 400px; /* 移动端适当调整高度 */
+            }
+        }
+        
+        .small {
+            font-size: 0.8rem;
+            color: #666;
+        }
+        
+        /* 中山篆查询样式 */
+        .seal-query-section {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f9f5eb;
+            border-radius: 8px;
+            border: 1px solid #e0d6c9;
+        }
+        
+        .seal-query-title {
+            font-size: 1rem;
+            color: #8c2e0b;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        
+        .seal-input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .seal-input-group input {
+            flex: 1;
+            margin-bottom: 0;
+        }
+        
+        .seal-input-group button {
+            width: auto;
+            margin-bottom: 0;
+        }
+        
+        .seal-results {
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #e0d6c9;
+            border-radius: 4px;
+            background: white;
+            padding: 10px;
+        }
+        
+        .seal-char-item {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 5px;
+            padding: 8px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .seal-char-item:hover {
+            background-color: #f5f2e9;
+            border-color: #8c2e0b;
+        }
+        
+        .seal-char-img {
+            width: 50px;
+            height: 50px;
+            object-fit: contain;
+        }
+        
+        .seal-not-found {
+            color: #e74c3c;
+            font-size: 0.9rem;
+            text-align: center;
+            padding: 10px;
+        }
+        
+        .seal-query-hint {
+            font-size: 0.8rem;
+            color: #8c2e0b;
+            margin-top: 5px;
+        }
+        
+        /* 查询结果展示样式 */
+        .seal-chars-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 15px;
+            transition: all 0.2s ease;
+        }
+        
+        /* 明信片顶部原始汉字显示 */
+        .original-text-top {
+            width: 100%;
+            text-align: center;
+            font-size: 1.4rem;
+            color: #333;
+            letter-spacing: 4px;
+            margin-bottom: 10px;
+        }
+        
+        .seal-char-display-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 15px;
+            transition: all 0.2s ease;
+        }
+        
+        .seal-char-display {
+            font-size: 4rem;
+            color: #2c3e50;
+            margin: 5px 0;
+            line-height: 1;
+            transition: all 0.2s ease;
+        }
+        
+        .original-char {
+            font-size: 1.2rem;
+            color: #6c757d;
+            margin-bottom: 5px;
+        }
+        
+        .placeholder-text {
+            color: #adb5bd;
+            font-size: 1rem;
+        }
+        
+        .char-info {
+            margin-top: 10px;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        .not-found {
+            color: #e74c3c;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+        
+        /* 背景选择样式 */
+        .background-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .background-option {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            color: rgba(0,0,0,0.7);
+            text-align: center;
+            overflow: hidden;
+        }
+        
+        .background-option:hover {
+            transform: scale(1.05);
+        }
+        
+        .background-option.active {
+            border-color: #8c2e0b;
+            box-shadow: 0 0 0 2px rgba(140, 46, 11, 0.3);
+        }
+        
+        .color-picker-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .color-preview {
+            width: 30px;
+            height: 30px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        
+        .color-picker-label {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        /* 预设背景样式 */
+        .bg-pattern-1 {
+            background: url(./中山王鼎.jpg);
+        }
+        
+        .bg-pattern-2 {
+            background: url(./中山王圆壶.jpg);
+        }
+        
+        .bg-pattern-3 {
+            background: url(./中山王方壶.jpg);
+        }
+    </style>
+    <!-- 截图明信片用于下载 -->
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>中山篆明信片生成</h1>
+            <p class="subtitle">输入汉字，查询中山篆字形（支持多汉字查询）</p>
+        </header>
+        
+        <div class="main-content">
+            <div class="controls-panel">
+                <div class="control-group">
+                    <div class="control-header">
+                        <h3>查询功能</h3>
+                    </div>
+                    <div class="control-content">
+                        <div class="seal-query-section">
+                            <div class="seal-query-title">中山篆字体查询</div>
+                            <div class="seal-input-group">
+                                <input type="text" id="hanzi-input" placeholder="请输入一个或多个汉字..." autofocus>
+                                <button id="query-btn">查询</button>
+                            </div>
+                            <div class="seal-query-hint">提示：可以输入多个汉字，系统将分别显示每个汉字的中山篆字形</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 背景选择模块 -->
+                <div class="control-group">
+                    <div class="control-header">
+                        <h3>背景选择</h3>
+                    </div>
+                    <div class="control-content">
+                        <div class="seal-query-title">选择明信片背景</div>
+                        <div class="background-options">
+                            <div class="background-option bg-pattern-1 active" data-bg="bg-pattern-1" title="中山王铁足鼎">中山王铁足鼎</div>
+                            <div class="background-option bg-pattern-2" data-bg="bg-pattern-2" title="中山王圆壶">中山王圆壶</div>
+                            <div class="background-option bg-pattern-3" data-bg="bg-pattern-3" title="中山王夔龙饰铜方壶">中山王夔龙饰铜方壶</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="info-box">
+                    <h4>使用说明</h4>
+                    <p>1. 在查询框中输入汉字并点击查询按钮</p>
+                    <p>2. 选择喜欢的明信片背景样式</p>
+                    <p>3. 查询结果将显示在预览区域中</p>
+                </div>
+            </div>
+            
+            <div class="preview-area">
+                <div class="postcard-preview">
+                    <h3>明信片预览</h3>
+                    <div class="postcard-canvas bg-pattern-1" id="postcard-canvas">
+                        <div id="original-text-display" class="original-text-top"></div>
+                        <div id="result-display" class="seal-display-area placeholder-text"></div>
+                    </div>
+                    <div class="postcard-size-info">
+                        标准明信片尺寸: 148mm × 100mm (竖版)
+                    </div>
+                    <button id="download-btn" style="margin-top: 10px; width: auto; padding: 8px 16px;">
+                        下载明信片（PNG）
+                    </button>
+                </div>
+                
+                <div class="info-box">
+                    <h4>关于中山篆书</h4>
+                    <p>中山篆书是战国时期古中山国文字，被誉为中国最美古文字。其风格既刚健劲挺又婀娜飘逸，直线上刻出锋利剑，弧线通透似弓弦。</p>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>© 2025 中山篆字体查询工具</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const hanziInput = document.getElementById('hanzi-input');
+            const queryBtn = document.getElementById('query-btn');
+            const resultDisplay = document.getElementById('result-display');
+            const postcardCanvas = document.getElementById('postcard-canvas');
+            const originalTextDisplay = document.getElementById('original-text-display');
+            const downloadBtn = document.getElementById('download-btn');
+            
+            // 背景选择相关变量
+            let selectedBgClass = 'bg-pattern-1';
+            
+            // 中山篆字体映射（示例数据，实际需要完整字库）
+            const zhongshanSealMap = {
+                '一':'一.png',
+                '与':'与.png',
+                '中':'中.png',
+                '么':'么.png',
+                '于':'于.png',
+                '你':'你.png',
+                '值':'值.png',
+                '到':'到.png',
+                '北':'北.png',
+                '区':'区.png',
+                '博':'博.png',
+                '去':'去.png',
+                '周':'周.png',
+                '哀':'哀.png',
+                '哎':'哎.png',
+                '唉':'唉.png',
+                '啊':'啊.png',
+                '嗳':'嗳.png',
+                '回':'回.png',
+                '国':'国.png',
+                '在':'在.png',
+                '埃':'埃.png',
+                '安':'安.png',
+                '家':'家.png',
+                '展':'展.png',
+                '山':'山.png',
+                '川':'川.png',
+                '庄':'庄.png',
+                '张':'张.png',
+                '我':'我.png',
+                '挨':'挨.png',
+                '撰':'撰.png',
+                '政':'政.png',
+                '新':'新.png',
+                '景':'景.png',
+                '曹':'曹.png',
+                '未':'未.png',
+                '末':'末.png',
+                '来':'来.png',
+                '毐':'毐.png',
+                '河':'河.png',
+                '济':'济.png',
+                '浩':'浩.png',
+                '爱':'爱.png',
+                '物':'物.png',
+                '癌':'癌.png',
+                '皑':'皑.png',
+                '矮':'矮.png',
+                '砹':'砹.png',
+                '篆':'篆.png',
+                '线':'线.png',
+                '绿':'绿.png',
+                '美':'美.png',
+                '色':'色.png',
+                '艾':'艾.png',
+                '蔼':'蔼.png',
+                '近':'近.png',
+                '这':'这.png',
+                '速':'速.png',
+                '那':'那.png',
+                '都':'都.png',
+                '锕':'锕.png',
+                '锿':'锿.png',
+                '阿':'阿.png',
+                '际':'际.png',
+                '院':'院.png',
+                '陪':'陪.png',
+                '隘':'隘.png',
+                '雄':'雄.png',
+                '霭':'霭.png',
+                '颜':'颜.png',
+            };
+            
+            // 查询按钮点击事件
+            queryBtn.addEventListener('click', function() {
+                const inputText = hanziInput.value.trim();
+                
+                if (!inputText) {
+                    resultDisplay.innerHTML = '<div class="placeholder-text">请输入汉字</div>';
+                    if (originalTextDisplay) originalTextDisplay.textContent = '';
+                    return;
+                }
+                
+                // 提取所有汉字字符
+                const hanziRegex = /[\u4e00-\u9fa5]/g;
+                const hanziChars = inputText.match(hanziRegex);
+                
+                if (!hanziChars || hanziChars.length === 0) {
+                    resultDisplay.innerHTML = '<div class="placeholder-text">请输入有效的汉字</div>';
+                    if (originalTextDisplay) originalTextDisplay.textContent = '';
+                    return;
+                }
+                
+                // 在明信片顶部显示提取到的汉字（只保留有效汉字）
+                if (originalTextDisplay) {
+                    originalTextDisplay.textContent = hanziChars.join('');
+                }
+                
+                // 清空结果容器
+                resultDisplay.innerHTML = '';
+                
+                // 创建容器用于存放所有字形
+                const charsContainer = document.createElement('div');
+                charsContainer.className = 'seal-chars-container';
+                
+                // 统计找到和未找到的字形
+                let foundCount = 0;
+                let notFoundChars = [];
+                
+                const totalChars = hanziChars.length;
+                
+                // 根据字数调整整体布局（间距、图片大小、位置）
+                let gap, maxSize, marginTop;
+                if (totalChars <= 4) {
+                    gap = 24;
+                    maxSize = 150;
+                    marginTop = 10;
+                } else if (totalChars <= 8) {
+                    gap = 18;
+                    maxSize = 110;
+                    marginTop = 5;
+                } else {
+                    gap = 10;
+                    maxSize = 80;
+                    marginTop = 0;
+                }
+                
+                charsContainer.style.gap = gap + 'px';
+                charsContainer.style.marginTop = marginTop + 'px';
+                
+                // 遍历每个汉字并查找对应的中山篆字形
+                hanziChars.forEach(char => {
+                    const sealChar = zhongshanSealMap[char];
+                    
+                    // 创建单个汉字容器
+                    const charItem = document.createElement('div');
+                    charItem.className = 'seal-char-display-item';
+                    
+                    if (sealChar) {
+                        foundCount++;
+                        
+                        // 如果是图片路径，创建 <img>
+                        if (/\.(png|jpe?g|gif|svg)$/i.test(sealChar)) {
+                            const img = document.createElement('img');
+                            img.className = 'seal-char-display';
+                            img.src = encodeURI(sealChar);
+                            img.alt = char;
+                            img.style.maxWidth = maxSize + 'px';
+                            img.style.maxHeight = maxSize + 'px';
+                            charItem.appendChild(img);
+                        } 
+                        // 否则当作纯文本字符处理
+                        else {
+                            const div = document.createElement('div');
+                            div.className = 'seal-char-display';
+                            div.textContent = sealChar;
+                            charItem.appendChild(div);
+                        }
+                    } else {
+                        notFoundChars.push(char);
+                        
+                        // 显示未找到提示
+                        const notFoundDiv = document.createElement('div');
+                        notFoundDiv.className = 'placeholder-text';
+                        notFoundDiv.textContent = '未找到';
+                        charItem.appendChild(notFoundDiv);
+                    }
+                    
+                    charsContainer.appendChild(charItem);
+                });
+                
+                resultDisplay.appendChild(charsContainer);
+                
+            });
+            
+            // 按Enter键触发查询
+            hanziInput.addEventListener('keyup', function(event) {
+                if (event.key === 'Enter') {
+                    queryBtn.click();
+                }
+            });
+            
+            // 背景选择功能
+            const backgroundOptions = document.querySelectorAll('.background-option');
+            
+            // 预设背景选择
+            backgroundOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    // 移除所有选项的active类
+                    backgroundOptions.forEach(opt => opt.classList.remove('active'));
+                    
+                    // 给当前选项添加active类
+                    this.classList.add('active');
+                    
+                    // 更新选中的背景类
+                    selectedBgClass = this.getAttribute('data-bg');
+                    
+                    // 应用背景
+                    applyBackground();
+                });
+            });
+            
+            // 应用背景函数
+            function applyBackground() {
+                // 首先移除所有预设背景类
+                postcardCanvas.classList.remove('bg-pattern-1', 'bg-pattern-2', 'bg-pattern-3');
+                
+                // 如果是预设背景
+                if (selectedBgClass) {
+                    postcardCanvas.classList.add(selectedBgClass);
+                    postcardCanvas.style.backgroundColor = '';
+                } 
+            }
+
+            // 下载明信片功能
+            if (downloadBtn) {
+                downloadBtn.addEventListener('click', function() {
+                    if (!window.html2canvas) {
+                        alert('截图组件加载失败，请检查网络后重试（需要联网加载 html2canvas）。');
+                        return;
+                    }
+
+                    // 简单的点击反馈
+                    const oldText = downloadBtn.textContent;
+                    downloadBtn.textContent = '生成中...';
+                    downloadBtn.disabled = true;
+
+                    // 使用 html2canvas 将明信片区域转为图片
+                    html2canvas(postcardCanvas, {
+                        useCORS: true,
+                        allowTaint: true,
+                        backgroundColor: null,
+                        scale: 2 // 提高分辨率，适合打印
+                    }).then(canvas => {
+                        canvas.toBlob(function(blob) {
+                            if (!blob) {
+                                alert('生成图片失败：浏览器阻止了本地图片或画布。建议在浏览器控制台查看错误信息。');
+                                return;
+                            }
+                            const url = URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = '中山篆明信片.png';
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            URL.revokeObjectURL(url);
+                        });
+                    }).catch(err => {
+                        console.error('生成明信片图片出错:', err);
+                        alert('生成图片失败，常见原因：\n1. 直接用文件方式打开（file://），导致本地图片跨域；\n2. 浏览器安全策略限制。\n建议使用本地服务器打开（例如 VSCode 的 Live Server），再试一次。');
+                    }).finally(() => {
+                        downloadBtn.textContent = oldText;
+                        downloadBtn.disabled = false;
+                    });
+                });
+            }
+        });
+    </script>
+</body>
+</html>
